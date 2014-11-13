@@ -1,0 +1,115 @@
+<html>
+<head>
+<script>
+function handleFileSelect(evt) {
+	var files= evt.target.files;
+	reader = new FileReader();
+	reader.readAsText(files[0]);
+	reader.onload = function(e) {
+		var result = e.target.result.split('\n');
+		var x;
+		var startsWithPM = timeArray(result[0])['ampm']=='PM';
+		var outerMinuteGroups = {}
+		for (x in result) {
+			var line = result[x];
+			var rest = line.substring(line.indexOf(']')+1);
+			var time = parsedTime(line, startsWithPM);
+			if(!outerMinuteGroups[time.getTime()]) {
+				outerMinuteGroups[time.getTime()] = [];
+			}
+			outerMinuteGroups[time.getTime()].push(rest);
+		}
+		var list = document.getElementById('list');
+		list.innerHTML=''
+		var outerMinutes = Object.keys(outerMinuteGroups);
+		if (outerMinutes[outerMinutes.length-1] == 'NaN') {
+			outerMinutes.pop();
+		}
+		document.getElementById('start').addEventListener('click', (function(minuteGroups) {
+				return function() {
+					var minutes = Object.keys(minuteGroups);
+					if (minutes[minutes.length-1] == 'NaN') {
+						minutes.pop();
+					}
+					var startMinute = document.getElementById('startminute').value;
+					if (startMinute != '') {
+						startMinute = parseInt(minutes[0])+parseInt(startMinute)*60000;
+						var firstMinute = parseInt(minutes[0]);
+						while (firstMinute < startMinute) {
+							minutes.shift();
+							firstMinute = parseInt(minutes[0]);
+						}
+					} else {
+						startMinute = parseInt(minutes[0]);
+					}
+					var minute;
+					var linesWithTimes = {}
+					for (minute in minutes) {
+						var minuteGroup = minuteGroups[minutes[minute]];
+						var delay = ~~(60000/minuteGroup.length);
+						for (var i = 0; i<minuteGroup.length; i++) {
+							linesWithTimes[parseInt(minutes[minute])+i*delay] = minuteGroup[i];
+						}
+					}
+					var intervalId = document.getElementById('intervalId')
+					if (intervalId.innerHTML != '') {
+					    clearInterval(intervalId.innerHTML);
+					    intervalId.innertHTML = '';
+					}
+					var list = document.getElementById('list');
+					list.innerHTML=''
+					var sinceTime = 0;
+					var checkInterval = 50;
+					var lineTimes = Object.keys(linesWithTimes).sort();
+
+					setTimeout(function() {intervalId.innerHTML=setInterval(function() {
+							if (document.getElementById('pause').checked) {
+								return;
+							}
+							while (parseInt(lineTimes[0]) <= startMinute+sinceTime) {
+								var e = document.createElement('div');
+								e.innerHTML = linesWithTimes[lineTimes.shift()]
+								list.appendChild(e);
+								var scrolldiv = document.getElementById("scrollbox");
+								scrolldiv.scrollTop = scrolldiv.scrollHeight;
+							}
+							sinceTime+=checkInterval;
+							},checkInterval);}, parseInt(lineTimes[0]) - startMinute);
+				}
+		})(outerMinuteGroups));
+	}
+}
+
+function timeArray(line) {
+	var time = line.substring(1,line.indexOf(']'));
+	var hours = time.split(' ')[0].split(':')[0];
+	var minutes = time.split(' ')[0].split(':')[1];
+	var ampm = time.split(' ')[1];
+	return {'hours':hours, 'minutes':minutes,'ampm':ampm}
+}
+
+function parsedTime(line, startsWithPM) {
+	var time = timeArray(line);
+	var dateString = '1970-01-'+(startsWithPM && time['ampm']=='AM' ? '02' : '01')+'T'+(parseInt(time['hours']) + (time['ampm'] == 'PM' ? 12 : 0)) +':'+time['minutes']+':00';
+	return new Date(dateString);
+}
+window.onload = function() {
+document.getElementById('files').addEventListener('change',handleFileSelect,false);
+};
+</script>
+</head>
+<body>
+<input type="file" id="files" name="files" />
+<label>Start Minute</label><input type="number" id="startminute" name="start minute"/>
+<input type="button" id="start" value="Start Chat Log"/>
+<label>Pause</label><input type="checkbox" id="pause" name="pause button"/>
+<div id="scrollbox" style="overflow: scroll;
+	resize: both;
+	height: 300px;
+	width: 500px;
+	">
+<output id="list"></output>
+</div>
+<div id="intervalId" style="display: none;"/>
+</body>
+</html>
