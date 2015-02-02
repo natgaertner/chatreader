@@ -11,7 +11,7 @@ function handleFileSelect(evt) {
 		var startsWithPM = timeArray(result[0])['ampm']=='PM';
 		var outerMinuteGroups = {}
 		for (x in result) {
-			var line = result[x];
+			var line = result[x].trim();
 			var rest = line.substring(line.indexOf(']')+1);
 			var time = parsedTime(line, startsWithPM);
 			if(!outerMinuteGroups[time.getTime()]) {
@@ -60,7 +60,7 @@ function handleFileSelect(evt) {
 					list.innerHTML=''
 					var sinceTime = 0;
 					var checkInterval = 50;
-					var lineTimes = Object.keys(linesWithTimes).sort();
+					var lineTimes = Object.keys(linesWithTimes).sort(function(x,y) { return parseInt(x)-parseInt(y);});
 
 					setTimeout(function() {intervalId.innerHTML=setInterval(function() {
 							if (document.getElementById('pause').checked) {
@@ -81,6 +81,7 @@ function handleFileSelect(evt) {
 }
 
 function timeArray(line) {
+	line = line.trim();
 	var time = line.substring(1,line.indexOf(']'));
 	var hours = time.split(' ')[0].split(':')[0];
 	var minutes = time.split(' ')[0].split(':')[1];
@@ -113,3 +114,4 @@ document.getElementById('files').addEventListener('change',handleFileSelect,fals
 <div id="intervalId" style="display: none;"/>
 </body>
 </html>
+
